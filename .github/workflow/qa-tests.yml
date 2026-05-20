@@ -1,0 +1,68 @@
+# .github/workflows/qa-tests.yml
+# ─────────────────────────────────────────────────────────────
+# Triggers on every Pull Request to main.
+# Runs the full Playwright suite and uploads the HTML report.
+# ─────────────────────────────────────────────────────────────
+
+name: QA — Playwright Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]       # also run on direct pushes to main
+
+jobs:
+  playwright-tests:
+    name: Run Playwright tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # 1. Check out the code from the PR branch
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Set up Node.js (match your local version)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 3. Install project dependencies (uses package-lock.json — faster than npm install)
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Install Playwright browsers + their OS-level dependencies
+      #    --with-deps installs chromium, firefox, webkit system libs automatically
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      # 5. Run the tests
+      #    BASE_URL is stored as a GitHub Actions secret — never hardcode URLs in CI
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          CI: true
+
+      # 6. Upload the HTML report as a downloadable artifact
+      #    "if: always()" means this runs even when tests fail — so you can
+      #    download the report and see exactly what went wrong
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 14
+
+      # 7. Upload failure screenshots/videos (only exist if tests failed)
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failures-${{ github.run_number }}
+          path: test-results/
+          retention-days: 7
