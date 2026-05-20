@@ -5,8 +5,8 @@
 // ============================================================
 
 import { test, expect } from '@playwright/test';
-import { LoginPage }     from '/Users/anshulchoukade/letshop-tests/pages/LoginPage.js';
-import { DashboardPage } from '/Users/anshulchoukade/letshop-tests/pages/DashboardPage.js';
+import { LoginPage }     from '../pages/LoginPage.js';
+import { DashboardPage } from '../pages/DashboardPage.js';
 
 // ─── Test data ───────────────────────────────────────────────
 // In a real project these come from environment variables or
