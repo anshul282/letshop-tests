@@ -1,0 +1,85 @@
+# .github/workflows/playwright.yml
+# ─────────────────────────────────────────────────────────────────
+# Runs your full Playwright suite on every PR to main.
+# Also runs on direct pushes to main (e.g. hotfix merges).
+#
+# What it does:
+#   1. Checks out code
+#   2. Installs Node + dependencies
+#   3. Installs Playwright browsers
+#   4. Runs all tests (login + cart)
+#   5. Uploads HTML report + failure artifacts — always
+# ─────────────────────────────────────────────────────────────────
+
+name: Playwright tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run Playwright tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. Get the code ──────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Node.js ────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm               # caches node_modules between runs = faster
+
+      # ── 3. Install project dependencies ─────────────────────
+      # npm ci is stricter than npm install:
+      #   - Uses package-lock.json exactly (no surprise version bumps)
+      #   - Deletes node_modules first (clean install every time)
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 4. Install Playwright browsers ───────────────────────
+      # --with-deps also installs OS-level libs (fonts, codecs)
+      # that Chromium/Firefox/WebKit need on a bare Ubuntu runner.
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      # ── 5. Run the tests ─────────────────────────────────────
+      # BASE_URL is stored as a GitHub Secret — see README for setup.
+      # CI=true tells playwright.config.js to:
+      #   - use retries: 2
+      #   - use workers: 4
+      #   - add the 'github' reporter (shows failures inline on the PR)
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          CI: true
+
+      # ── 6. Upload HTML report ─────────────────────────────────
+      # "if: always()" means this step runs even when tests fail.
+      # Without it you'd have no report to download when things go wrong.
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 14        # keep for 2 weeks then auto-delete
+
+      # ── 7. Upload failure screenshots + videos ────────────────
+      # Only creates this artifact when tests actually fail.
+      # Each failed test saves a screenshot + video in test-results/.
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failures-${{ github.run_number }}
+          path: test-results/
+          retention-days: 7
