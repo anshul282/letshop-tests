@@ -5,9 +5,9 @@
 // ─────────────────────────────────────────────────────────────
 
 import { test, expect } from '@playwright/test';
-import { LoginPage }     from '/Users/anshulchoukade/letshop-tests/pages/LoginPage.js';
-import { DashboardPage } from '/Users/anshulchoukade/letshop-tests/pages/DashboardPage.js';
-import { CartPage }      from '/Users/anshulchoukade/letshop-tests/pages/CartPage.js';
+import { LoginPage }     from '../pages/LoginPage.js';
+import { DashboardPage } from '../pages/DashboardPage.js';
+import { CartPage }      from '../pages/CartPage.js';
 
 // ─── Shared test credentials ─────────────────────────────────
 const USER = {
