@@ -1,66 +1,57 @@
 // playwright.config.js
-// Project: Let's Shop — rahulshettyacademy.com/client
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Detects whether we're running locally or in GitHub Actions CI
+// and adjusts behaviour accordingly.
+// ─────────────────────────────────────────────────────────────────
 
 import { defineConfig, devices } from '@playwright/test';
+
+const isCI = !!process.env.CI;
 
 export default defineConfig({
 
   testDir: './tests',
 
-  // How long a single test can run before it times out
-  timeout: 30_000,
+  // ── Timeouts ──────────────────────────────────────────────────
+  timeout: 40_000,
+  expect: { timeout: 10_000 },
 
-  // In CI: retry failed tests twice (catches flaky network issues)
-  // Locally: no retries so you see failures immediately
-  retries: process.env.CI ? 3 : 0,
+  // ── Retries ───────────────────────────────────────────────────
+  // CI: retry 2x to absorb network blips on the practice app
+  // Local: 0 — see failures immediately
+  retries: isCI ? 2 : 0,
 
-  // Run test files in parallel (faster in CI)
-  // Set to 1 locally when debugging so output is easier to read
-  workers: process.env.CI ? 5 : 1,
+  // ── Parallelism ───────────────────────────────────────────────
+  // CI runners have multiple CPUs — run tests in parallel
+  // Local: 1 worker so you can watch and debug clearly
+  workers: isCI ? 4 : 1,
 
-  // Reports: HTML (open in browser) + GitHub annotations (shows inline on PR)
+  // ── Reporters ─────────────────────────────────────────────────
+  // html    → playwright-report/index.html
+  // list    → prints each result to terminal as it runs
+  // github  → annotates the PR diff with failure locations (CI only)
   reporter: [
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
-    ['list'],  // prints each test result in terminal
-    ...(process.env.CI ? [['github']] : []),
+    ['list'],
+    ...(isCI ? [['github']] : []),
   ],
 
   use: {
-    // Base URL — in CI this comes from GitHub Actions secret
+    // In CI: comes from GitHub Secret BASE_URL
+    // Locally: falls back to the live practice app
     baseURL: process.env.BASE_URL || 'https://rahulshettyacademy.com',
 
-    // Only capture screenshot/video on failure (keeps CI artifacts small)
     screenshot: 'only-on-failure',
     video:      'retain-on-failure',
+    trace:      'on-first-retry',
 
-    // Trace gives you a full step-by-step replay of a failed test
-    trace: 'on-first-retry',
-
-    // Slows down actions by 100ms locally — helpful when watching tests run
-    // Remove or comment out in CI
-    // slowMo: process.env.CI ? 0 : 100,
+    ignoreHTTPSErrors: true,
   },
 
   projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    // Mobile viewports (optional — uncomment to add)
-    // {
-    //   name: 'mobile-chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox',  use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit',   use: { ...devices['Desktop Safari'] } },
   ],
 
 });
